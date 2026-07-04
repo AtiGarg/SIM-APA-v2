@@ -15,14 +15,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-
 from utils.config import Config
 from utils.seed import set_seed
+from utils.checkpoint import save_checkpoint
 from datasets.kitti_dataset import KITTIDataset
 from models.simapa_model import SIMAPAModel
 from losses.reconstruction_loss import FeatureReconstructionLoss
 from training.trainer import Trainer
-from utils.checkpoint import save_checkpoint
 
 
 def main() -> None:
@@ -37,14 +36,24 @@ def main() -> None:
         image_size=cfg.dataset.image_size,
     )
 
-    # Small subset for debugging.
-    # Later we will remove this and use the full dataset.
-    train_subset = Subset(dataset, list(range(64)))
+    train_indices = list(range(0, 64))
+    val_indices = list(range(64, 80))
+
+    train_dataset = Subset(dataset, train_indices)
+    val_dataset = Subset(dataset, val_indices)
 
     train_loader = DataLoader(
-        train_subset,
+        train_dataset,
         batch_size=cfg.dataset.batch_size,
         shuffle=True,
+        num_workers=cfg.dataset.num_workers,
+        pin_memory=cfg.dataset.pin_memory,
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=cfg.dataset.batch_size,
+        shuffle=False,
         num_workers=cfg.dataset.num_workers,
         pin_memory=cfg.dataset.pin_memory,
     )
@@ -73,15 +82,27 @@ def main() -> None:
         device=device,
     )
 
+    best_val_loss = float("inf")
+
     for epoch in range(1, 3):
-        metrics = trainer.train_one_epoch(
+        train_metrics = trainer.train_one_epoch(
             dataloader=train_loader,
             epoch=epoch,
         )
 
+        val_metrics = trainer.validate(
+            dataloader=val_loader,
+            epoch=epoch,
+        )
+
+        metrics = {
+            **train_metrics,
+            **val_metrics,
+        }
+
         print(f"Epoch {epoch} metrics:", metrics)
 
-        checkpoint_path = save_checkpoint(
+        save_checkpoint(
             model=model,
             optimizer=optimizer,
             epoch=epoch,
@@ -90,7 +111,19 @@ def main() -> None:
             filename=f"epoch_{epoch}.pth",
         )
 
-        print(f"Saved checkpoint: {checkpoint_path}")
+        if val_metrics["val_loss"] < best_val_loss:
+            best_val_loss = val_metrics["val_loss"]
+
+            best_path = save_checkpoint(
+                model=model,
+                optimizer=optimizer,
+                epoch=epoch,
+                metrics=metrics,
+                checkpoint_dir=cfg.paths.checkpoints,
+                filename="best.pth",
+            )
+
+            print(f"Saved best checkpoint: {best_path}")
 
 
 if __name__ == "__main__":
