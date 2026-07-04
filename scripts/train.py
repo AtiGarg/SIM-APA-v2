@@ -36,8 +36,8 @@ def main() -> None:
         image_size=cfg.dataset.image_size,
     )
 
-    train_indices = list(range(0, 64))
-    val_indices = list(range(64, 80))
+    train_indices = list(range(0, 6000))
+    val_indices = list(range(6000, 7000))
 
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
@@ -84,7 +84,7 @@ def main() -> None:
 
     best_val_loss = float("inf")
 
-    for epoch in range(1, 3):
+    for epoch in range(1, 51):
         train_metrics = trainer.train_one_epoch(
             dataloader=train_loader,
             epoch=epoch,
