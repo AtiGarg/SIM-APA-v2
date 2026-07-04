@@ -22,6 +22,7 @@ from datasets.kitti_dataset import KITTIDataset
 from models.simapa_model import SIMAPAModel
 from losses.reconstruction_loss import FeatureReconstructionLoss
 from training.trainer import Trainer
+from utils.checkpoint import save_checkpoint
 
 
 def main() -> None:
@@ -79,6 +80,17 @@ def main() -> None:
         )
 
         print(f"Epoch {epoch} metrics:", metrics)
+
+        checkpoint_path = save_checkpoint(
+            model=model,
+            optimizer=optimizer,
+            epoch=epoch,
+            metrics=metrics,
+            checkpoint_dir=cfg.paths.checkpoints,
+            filename=f"epoch_{epoch}.pth",
+        )
+
+        print(f"Saved checkpoint: {checkpoint_path}")
 
 
 if __name__ == "__main__":
