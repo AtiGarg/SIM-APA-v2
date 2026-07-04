@@ -1,0 +1,9 @@
+dataset:
+  name: KITTI
+  root_dir: /kaggle/input/datasets/klemenko/kitti-dataset
+  image_folder: data_object_image_2/training/image_2
+  label_folder: data_object_label_2/training/label_2
+  image_size: 640
+  batch_size: 8
+  num_workers: 2
+  pin_memory: true

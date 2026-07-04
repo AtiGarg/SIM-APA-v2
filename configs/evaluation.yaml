@@ -1,0 +1,12 @@
+evaluation:
+  metrics:
+    - global_semantic_similarity
+    - object_centric_similarity
+    - precision
+    - recall
+    - f1_score
+    - psnr
+    - ssim
+
+  save_figures: true
+  save_tables: true

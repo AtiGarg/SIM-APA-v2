@@ -1,0 +1,10 @@
+channel:
+  type: awgn
+  snr_db: 10
+  supported:
+    - awgn
+    - rayleigh
+    - rician
+
+rician:
+  k_factor: 5

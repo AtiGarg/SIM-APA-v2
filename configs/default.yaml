@@ -1,0 +1,10 @@
+project:
+  name: SIM-APA-v2
+  version: 2.0
+  seed: 42
+  device: cuda
+
+paths:
+  root: /kaggle/working/SIM-APA-v2
+  outputs: /kaggle/working/SIM-APA-v2/outputs
+  checkpoints: /kaggle/working/SIM-APA-v2/checkpoints
