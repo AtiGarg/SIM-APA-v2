@@ -19,15 +19,9 @@ class SIMAPAModel(nn.Module):
     """
     End-to-end SIM-APA model.
 
-    Pipeline:
-        Image
-        -> YOLO Backbone
-        -> Semantic Importance Module
-        -> Feature-aware Fusion
-        -> APA
-        -> DeepJSCC Encoder
-        -> Wireless Channel
-        -> DeepJSCC Decoder
+    This version uses YOLOv10 only as a frozen feature extractor.
+    During training, detections are set to empty because raw YOLO outputs from
+    the PyTorch DetectionModel are not Ultralytics Results objects.
     """
 
     def __init__(self, cfg) -> None:
@@ -36,12 +30,16 @@ class SIMAPAModel(nn.Module):
         self.cfg = cfg
 
         self.backbone = YOLOBackbone(
-            model_name=f"{cfg.model.backbone_variant}.pt",
+            model_name="yolov10s.pt",
             hook_layer_index=10,
             input_channels=cfg.model.raw_feature_channels,
             output_channels=cfg.model.feature_channels,
-            conf_threshold=0.25,
         )
+
+        self.backbone.eval()
+
+        for parameter in self.backbone.parameters():
+            parameter.requires_grad = False
 
         self.sim = SemanticImportanceModule(
             alpha=cfg.sim.alpha,
@@ -79,42 +77,56 @@ class SIMAPAModel(nn.Module):
             output_channels=cfg.deepjscc.input_channels,
         )
 
-    def _parse_detections(self, detections, device: torch.device) -> dict:
+    def train(self, mode: bool = True):
         """
-        Convert Ultralytics detections into clean tensors.
+        Set train/eval mode while keeping YOLO backbone frozen.
         """
-        boxes = detections[0].boxes
+        super().train(mode)
 
+        self.backbone.eval()
+
+        for parameter in self.backbone.parameters():
+            parameter.requires_grad = False
+
+        return self
+
+    def _empty_detections(self, device: torch.device) -> dict:
+        """
+        Create an empty detection dictionary.
+
+        This keeps SIM stable during training when using frozen YOLO features.
+        """
         return {
-            "boxes": boxes.xyxy.to(device),
-            "classes": boxes.cls.long().to(device),
-            "confidences": boxes.conf.to(device),
+            "boxes": torch.empty((0, 4), device=device),
+            "classes": torch.empty((0,), dtype=torch.long, device=device),
+            "confidences": torch.empty((0,), device=device),
         }
 
     def forward(self, images: torch.Tensor) -> dict:
         """
-        Run full SIM-APA forward pass.
+        Run full forward pass.
 
         Parameters
         ----------
         images : torch.Tensor
-            Input images [B, 3, 640, 640].
+            Input image tensor [B, 3, 640, 640].
 
         Returns
         -------
         dict
-            Complete model outputs.
+            Model outputs.
         """
-        features, detections = self.backbone(images)
+        with torch.no_grad():
+            features, _ = self.backbone(images)
 
-        parsed_detections = self._parse_detections(
-            detections=detections,
-            device=images.device,
+        detections = self._empty_detections(images.device)
+
+        sim_map, sim_info = self.sim(detections)
+
+        fused_features = self.fusion(
+            features,
+            sim_map.to(images.device),
         )
-
-        sim_map, sim_info = self.sim(parsed_detections)
-
-        fused_features = self.fusion(features, sim_map.to(images.device))
 
         apa_out = self.apa(fused_features)
 
@@ -126,7 +138,7 @@ class SIMAPAModel(nn.Module):
 
         return {
             "features": features,
-            "detections": parsed_detections,
+            "detections": detections,
             "sim_map": sim_map,
             "sim_info": sim_info,
             "fused_features": fused_features,
