@@ -77,6 +77,15 @@ class SIMAPAModel(nn.Module):
             output_channels=cfg.deepjscc.input_channels,
         )
 
+        # Reproject reconstructed semantic feature back to YOLO layer-10 space.
+        # Decoder output: [B, 256, 20, 20]
+        # YOLO layer 10:  [B, 512, 20, 20]
+        self.reprojection = nn.Conv2d(
+            cfg.deepjscc.input_channels,
+            cfg.model.raw_feature_channels,
+            kernel_size=1,
+        )
+
     def train(self, mode: bool = True):
         """
         Set train/eval mode while keeping YOLO backbone frozen.
@@ -136,6 +145,8 @@ class SIMAPAModel(nn.Module):
 
         reconstructed = self.decoder(received)
 
+        reprojected = self.reprojection(reconstructed)
+
         return {
             "features": features,
             "detections": detections,
@@ -147,4 +158,5 @@ class SIMAPAModel(nn.Module):
             "latent": latent,
             "received": received,
             "reconstructed": reconstructed,
+            "reprojected": reprojected,
         }
