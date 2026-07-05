@@ -1,5 +1,5 @@
 channel:
-  type: awgn
+  type: rician
   snr_db: 10
   supported:
     - awgn
