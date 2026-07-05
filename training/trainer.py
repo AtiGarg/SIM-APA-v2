@@ -69,10 +69,13 @@ class Trainer:
             "cosine_similarity": total_similarity / num_batches,
         }
 
-    @torch.no_grad()
+   
     def validate(self, dataloader, epoch: int = 1) -> dict:
         self.model.eval()
+        torch.manual_seed(42)
 
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(42)
         total_loss = 0.0
         total_mse = 0.0
         total_cosine = 0.0
@@ -80,27 +83,27 @@ class Trainer:
         num_batches = 0
 
         progress = tqdm(dataloader, desc=f"Val Epoch {epoch}")
+        with torch.no_grad():
+            for batch in progress:
+                images = batch["image"].to(self.device)
 
-        for batch in progress:
-            images = batch["image"].to(self.device)
+                outputs = self.model(images)
 
-            outputs = self.model(images)
-
-            loss_out = self.criterion(
+                loss_out = self.criterion(
                 reconstructed=outputs["reconstructed"],
                 target=outputs["features"].detach(),
-            )
+                )
 
-            total_loss += loss_out["loss"].item()
-            total_mse += loss_out["mse_loss"].item()
-            total_cosine += loss_out["cosine_loss"].item()
-            total_similarity += loss_out["cosine_similarity"].item()
-            num_batches += 1
+                total_loss += loss_out["loss"].item()
+                total_mse += loss_out["mse_loss"].item()
+                total_cosine += loss_out["cosine_loss"].item()
+                total_similarity += loss_out["cosine_similarity"].item()
+                num_batches += 1
 
-            progress.set_postfix(
-                val_loss=loss_out["loss"].item(),
-                val_cos=loss_out["cosine_similarity"].item(),
-            )
+                progress.set_postfix(
+                    val_loss=loss_out["loss"].item(),
+                    val_cos=loss_out["cosine_similarity"].item(),
+                )
 
         return {
             "val_loss": total_loss / num_batches,
