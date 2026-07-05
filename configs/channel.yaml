@@ -1,5 +1,5 @@
 channel:
-  type: rayleigh
+  type: awgn
   snr_db: 10
   supported:
     - awgn
