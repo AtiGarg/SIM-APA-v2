@@ -126,7 +126,10 @@ class SIMAPAModel(nn.Module):
             Model outputs.
         """
         with torch.no_grad():
-            features, _ = self.backbone(images)
+            backbone_out = self.backbone(images)
+
+        raw_feature = backbone_out["raw_feature"]
+        features = backbone_out["projected_feature"]
 
         detections = self._empty_detections(images.device)
 
@@ -148,6 +151,7 @@ class SIMAPAModel(nn.Module):
         reprojected = self.reprojection(reconstructed)
 
         return {
+            "raw_feature": raw_feature,
             "features": features,
             "detections": detections,
             "sim_map": sim_map,

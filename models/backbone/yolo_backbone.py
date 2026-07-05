@@ -86,6 +86,12 @@ class YOLOBackbone(nn.Module):
         if self._captured_feature is None:
             raise RuntimeError("Feature hook failed.")
 
-        projected = self.projection(self._captured_feature)
+        raw_feature = self._captured_feature
 
-        return projected, detections
+        projected = self.projection(raw_feature)
+
+        return {
+            "raw_feature": raw_feature,
+            "projected_feature": projected,
+            "detections": detections,
+        }
