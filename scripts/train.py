@@ -108,7 +108,7 @@ def main() -> None:
             epoch=epoch,
             metrics=metrics,
             checkpoint_dir=cfg.paths.checkpoints,
-            filename=f"epoch_{epoch}.pth",
+            filename="last.pth",
         )
 
         if val_metrics["val_loss"] < best_val_loss:
