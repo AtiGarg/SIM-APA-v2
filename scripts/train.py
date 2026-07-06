@@ -21,6 +21,7 @@ from utils.checkpoint import save_checkpoint
 from datasets.kitti_dataset import KITTIDataset
 from models.simapa_model import SIMAPAModel
 from losses.reconstruction_loss import FeatureReconstructionLoss
+from losses.reprojection_loss import ReprojectionLoss
 from training.trainer import Trainer
 
 
@@ -65,12 +66,18 @@ def main() -> None:
         cosine_weight=0.1,
     )
 
+    reprojection_criterion = ReprojectionLoss(
+        mse_weight=1.0,
+        cosine_weight=0.1,
+    )
+
     optimizer = torch.optim.AdamW(
         list(model.sim.parameters())
         + list(model.fusion.parameters())
         + list(model.apa.parameters())
         + list(model.encoder.parameters())
-        + list(model.decoder.parameters()),
+        + list(model.decoder.parameters())
+        + list(model.reprojection.parameters()),
         lr=cfg.training.learning_rate,
         weight_decay=cfg.training.weight_decay,
     )
@@ -80,6 +87,8 @@ def main() -> None:
         criterion=criterion,
         optimizer=optimizer,
         device=device,
+        reprojection_criterion=reprojection_criterion,
+        reprojection_weight=0.1,
     )
 
     best_val_loss = float("inf")

@@ -29,3 +29,6 @@ datasets/
 # OS
 .DS_Store
 Thumbs.db
+SIM-APA-final-checkpoints.zip
+*.pth
+*.zip
