@@ -12,6 +12,7 @@ from models.sim.semantic_importance import SemanticImportanceModule
 from models.fusion.fusion import FeatureAwareFusion
 from models.apa.apa import AdaptivePowerAllocation
 from models.deepjscc.autoencoder import DeepJSCCEncoder, DeepJSCCDecoder
+from models.refinement import FeatureRefinementHead
 from channels.factory import build_channel
 
 
@@ -86,6 +87,13 @@ class SIMAPAModel(nn.Module):
             kernel_size=1,
         )
 
+        self.refinement_head = FeatureRefinementHead(
+            channels=cfg.model.raw_feature_channels,
+            hidden_channels=cfg.model.raw_feature_channels,
+            groups=32,
+            num_blocks=2,
+        )
+
     def train(self, mode: bool = True):
         """
         Set train/eval mode while keeping YOLO backbone frozen.
@@ -150,6 +158,8 @@ class SIMAPAModel(nn.Module):
 
         reprojected = self.reprojection(reconstructed)
 
+        refined_feature = self.refinement_head(reprojected)
+
         return {
             "raw_feature": raw_feature,
             "features": features,
@@ -163,4 +173,5 @@ class SIMAPAModel(nn.Module):
             "received": received,
             "reconstructed": reconstructed,
             "reprojected": reprojected,
+            "refined_feature": refined_feature,
         }
